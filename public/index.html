@@ -121,7 +121,7 @@
 
       <!-- Subtitle -->
       <p class="mt-5 text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
-        TitanMotor Logistics distributes heavy industrial electric motors across nationwide client hubs. This platform integrates a 5-entity relational database with machine learning forecasting and linear programming optimization to reduce freight costs by <strong>16.2%</strong>.
+        TitanMotor Logistics distributes heavy industrial electric motors across nationwide client hubs. This platform integrates a 5-entity relational database with machine learning forecasting and linear programming optimization to reduce freight costs by <strong data-live="savings-pct">--</strong> versus the historical dispatch mix (live result from the bundled data).
       </p>
 
       <!-- Hero Call-To-Action Buttons -->
@@ -140,7 +140,7 @@
       <!-- Quick Stats Strip -->
       <div class="mt-14 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mx-auto text-left">
         <div class="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div class="text-2xl font-black text-sky-600 dark:text-sky-400">16.2%</div>
+          <div class="text-2xl font-black text-sky-600 dark:text-sky-400" data-live="savings-pct">--</div>
           <div class="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-0.5">Freight Cost Savings</div>
         </div>
         <div class="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -152,8 +152,8 @@
           <div class="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-0.5">Tracked Freight Transactions</div>
         </div>
         <div class="bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400">R² = 0.924</div>
-          <div class="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-0.5">Forecasting Model Accuracy</div>
+          <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400" data-live="r2-label">R² = --</div>
+          <div class="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-0.5">Held-out Forecast Accuracy</div>
         </div>
       </div>
 
@@ -168,7 +168,7 @@
         <h2 class="text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">Industrial Case Study</h2>
         <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">Company Background & Business Problem</h3>
         <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-2">
-          How TitanMotor Logistics Corp. turned a 24.8% logistics overhead crisis into an optimized, data-driven supply chain competitive advantage.
+          How a hypothetical manufacturer, TitanMotor Logistics Corp., can turn volatile freight spend into an optimized, data-driven supply chain advantage.
         </p>
       </div>
 
@@ -195,7 +195,7 @@
           </div>
           <h4 class="text-base font-extrabold text-slate-900 dark:text-white">The Cost Dilemma</h4>
           <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-            Due to volatile carrier fuel rates, uncoordinated warehouse dispatching, and arbitrary carrier selection, quarterly freight shipping costs spiked by <strong>24.8%</strong>, exceeding \$145,000 monthly. Suboptimal route matching also led to delivery bottlenecks at client automotive and energy assembly facilities.
+            Volatile carrier rates, uncoordinated warehouse dispatching, and ad-hoc carrier selection make freight hard to control. In this seeded case study, 120 dispatches cost about <strong data-live="total-spend">--</strong> over six months, and monthly spend swings widely with dispatch volume. Delays affect <strong data-live="delay-rate">--</strong> of shipments, and suboptimal route matching creates bottlenecks at client automotive and energy assembly facilities. <em>(TitanMotor is a hypothetical company; figures come from the bundled sample database.)</em>
           </p>
           <div class="pt-2 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
             <i class="fa-solid fa-arrow-trend-up mr-1"></i> Unsustainable freight overhead
@@ -212,7 +212,7 @@
             The company deployed a cohesive full-stack analytics system that unifies 5 relational database entities. The system connects <strong>Descriptive KPIs</strong>, <strong>Predictive Regression</strong> for price & transit forecasting, and <strong>Prescriptive Linear Programming</strong> to compute the lowest-cost shipping schedule.
           </p>
           <div class="pt-2 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-            <i class="fa-solid fa-circle-dollar-to-slot mr-1"></i> $13,680+ verified cost reduction
+            <i class="fa-solid fa-circle-dollar-to-slot mr-1"></i> <span data-live="savings-usd">--</span> modeled cost reduction
           </div>
         </div>
 
@@ -338,7 +338,7 @@
             </div>
             <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">Linear Programming</span>
           </div>
-          <h3 class="font-extrabold text-sm text-slate-900 dark:text-white mt-4">Transportation Cost Optimizer (Simplex / VAM)</h3>
+          <h3 class="font-extrabold text-sm text-slate-900 dark:text-white mt-4">Transportation Cost Optimizer (VAM + MODI)</h3>
           <p class="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
             Formulates and solves the mathematical transportation problem to allocate motor units from warehouses to hubs, achieving the theoretical minimum cost while respecting all capacity and demand constraints.
           </p>
@@ -392,7 +392,7 @@
           </p>
           <ul class="text-[11px] text-slate-600 dark:text-slate-400 space-y-1.5 pt-1">
             <li><i class="fa-solid fa-sliders text-indigo-500 mr-1.5"></i> Interactive "What-If" Calculator</li>
-            <li><i class="fa-solid fa-check text-indigo-500 mr-1.5"></i> High Fit Accuracy ($R^2 = 0.924$)</li>
+            <li><i class="fa-solid fa-check text-indigo-500 mr-1.5"></i> <span data-live="r2-label-held">Held-out fit (R² = --)</span></li>
             <li><i class="fa-solid fa-weight-hanging text-indigo-500 mr-1.5"></i> Dynamic Cargo Weight Calculations</li>
           </ul>
         </div>
@@ -410,7 +410,7 @@
           <ul class="text-[11px] text-slate-600 dark:text-slate-400 space-y-1.5 pt-1">
             <li><i class="fa-solid fa-table-cells text-emerald-500 mr-1.5"></i> Optimal Distribution Matrix</li>
             <li><i class="fa-solid fa-route text-emerald-500 mr-1.5"></i> Actionable Route Directives</li>
-            <li><i class="fa-solid fa-wallet text-emerald-500 mr-1.5"></i> $13,680 (16.2%) Net Cost Savings</li>
+            <li><i class="fa-solid fa-wallet text-emerald-500 mr-1.5"></i> <span data-live="savings-both">-- Net Cost Savings</span></li>
           </ul>
         </div>
 
@@ -482,6 +482,32 @@
     }
 
     document.addEventListener('DOMContentLoaded', initTheme);
+  </script>
+  <!-- Live figures: filled from the API so result numbers are never typed into this page -->
+  <script>
+    (function () {
+      function setAll(key, text) {
+        document.querySelectorAll('[data-live="' + key + '"]').forEach(function (el) { el.textContent = text; });
+      }
+      function usd(n) { return '$' + Math.round(Number(n)).toLocaleString('en-US'); }
+      fetch('/api/predictive/metrics').then(function (r) { return r.json(); }).then(function (m) {
+        if (!m || !m.success) return;
+        setAll('r2-label', 'R² = ' + m.r_squared);
+        setAll('r2-label-held', 'Held-out fit (R² = ' + m.r_squared + ')');
+      }).catch(function (e) { console.error('Metrics unavailable:', e); });
+      fetch('/api/prescriptive/optimize').then(function (r) { return r.json(); }).then(function (o) {
+        if (!o || !o.success) return;
+        var pct = Number(o.pctSavings).toFixed(1) + '%';
+        setAll('savings-pct', pct);
+        setAll('savings-usd', usd(o.dollarSavings));
+        setAll('savings-both', usd(o.dollarSavings) + ' (' + pct + ') Net Cost Savings');
+      }).catch(function (e) { console.error('Optimization unavailable:', e); });
+      fetch('/api/descriptive/summary').then(function (r) { return r.json(); }).then(function (d) {
+        if (!d || !d.success || !d.totals) return;
+        setAll('total-spend', usd(d.totals.total_freight_cost));
+        setAll('delay-rate', Number(d.totals.delay_rate_pct).toFixed(1) + '%');
+      }).catch(function (e) { console.error('Summary unavailable:', e); });
+    })();
   </script>
 </body>
 </html>

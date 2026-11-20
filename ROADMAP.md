@@ -16,7 +16,7 @@ Develop a full-stack database and analytics application to **minimize total frei
 ## 2. Clean Architecture & Directory Structure
 
 ```
-FBA - Final Project/
+FBA---Final-Project/
 ├── config/
 │   └── database.js               # SQLite connection setup & configuration
 ├── controllers/
@@ -32,13 +32,16 @@ FBA - Final Project/
 ├── middlewares/
 │   └── dbAuthMiddleware.js       # PIN authorization check for /api/db/*
 ├── services/
-│   ├── regressionService.js      # Multi-variable regression modeling & metrics
-│   ├── optimizationService.js    # Transportation linear programming algorithm
+│   ├── laneService.js            # Lane distance/rate lookup (route, history, estimate)
+│   ├── regressionService.js      # OLS cost model, transit model, delay rates & hold-out validation
+│   ├── optimizationService.js    # Unit costs, historical baseline & solver inputs
+│   ├── transportSolver.js        # Exact transportation solver (Vogel's + MODI)
 │   └── pinService.js             # Security PIN verification & token generation
 ├── models/
 │   └── seeder.js                 # Seeding script (50+ rows across 5 tables)
 ├── public/
-│   ├── index.html                # Single-page dashboard interface
+│   ├── index.html                # Corporate landing page
+│   ├── dashboard.html            # 4-tab analytics & database dashboard
 │   ├── css/
 │   │   └── styles.css            # Custom UI styling and component design
 │   └── js/
@@ -48,7 +51,9 @@ FBA - Final Project/
 ├── data/
 │   └── titanmotor_logistics.db   # SQLite relational database file
 ├── server.js                     # Express server entry point
-├── package.json                  # Dependencies and execution scripts
+├── package.json                  # Dependencies, scripts and Node engine (>=22.5.0)
+├── README.md                     # Setup instructions and project overview
+├── BUSINESS_ANALYTICS_GUIDE.md   # Detailed guide to the 3 analytics tiers
 └── ROADMAP.md                    # Project roadmap and implementation progress
 ```
 
@@ -98,17 +103,19 @@ flowchart LR
 
 ### Step 2: Predictive Analytics ("What Will Happen?")
 * Multiple linear regression model predicting freight costs:
-  $$\text{Freight Cost} = \left( \beta_0 + \beta_1 \cdot \text{Weight} + \beta_2 \cdot \text{Distance} \right) \times \text{CarrierMultiplier} + \text{HandlingFee}$$
-* Dynamic transit lead time forecasting based on highway distance and carrier velocity.
+  $$\text{Freight Cost} = \beta_0 + \beta_1 \cdot \text{Weight} + \beta_2 \cdot \text{Distance} + \delta_{\text{carrier}} + \text{HandlingFee}$$
+  fitted by OLS on the shipment history, with carrier dummy variables $\delta_{\text{carrier}}$.
+* Transit lead time from a small regression on distance and carrier; delay risk from each carrier's historical late-shipment rate.
 * Interactive "What-If" prediction calculator with live sliders for motor units and parameters.
-* Statistical metrics displayed: Goodness of fit ($R^2 = 0.924$) and Mean Absolute Error (MAE).
+* Statistical metrics displayed, loaded live from `/api/predictive/metrics`: held-out $R^2$ and Mean Absolute Error (MAE) from an 80/20 train/test split, plus the sample size and fitted formula.
 
 ### Step 3: Prescriptive Analytics ("What Should We Do?")
 * Mathematical formulation of the Transportation Linear Programming Problem:
   $$\text{Minimize } Z = \sum_{i=1}^{m} \sum_{j=1}^{n} c_{ij} x_{ij}$$
   $$\text{Subject to: } \sum_{j} x_{ij} \le S_i \text{ (Supply)}, \quad \sum_{i} x_{ij} \ge D_j \text{ (Demand)}, \quad x_{ij} \ge 0$$
-* Computes the lowest-cost shipment allocation matrix.
-* Compares historical unoptimized costs vs. optimal prescribed costs, delivering substantial quantifiable dollar savings.
+* Supply is each warehouse's real `current_inventory`; any shortfall against demand is reported as unmet demand.
+* Computes the lowest-cost shipment allocation matrix with an exact method (Vogel's Approximation start, then MODI u-v optimality iterations).
+* Compares a baseline built from the historical dispatch mix in `shipment_transactions` against the optimal prescribed cost, using the same unit-cost matrix for both, and shows the dollar and percentage saving live from the API.
 * Generates actionable route dispatch directives for operations.
 
 ---
@@ -117,7 +124,7 @@ flowchart LR
 
 ### Phase 1: Core Architecture & Setup
 - [x] Select single candidate (TitanMotor Logistics Shipping Cost Minimization).
-- [x] Configure Node.js environment and package dependencies (`express`, `cors`).
+- [x] Configure Node.js environment (v22.5.0 or newer, for `node:sqlite`) and package dependencies (`express`, `cors`).
 - [x] Implement clean directory structure (`config/`, `controllers/`, `routes/`, `services/`, `models/`, `public/`).
 
 ### Phase 2: Database Layer & Data Seeding
@@ -132,7 +139,7 @@ flowchart LR
 ### Phase 3: Modular Backend & REST API
 - [x] Modular database connection layer (`config/database.js`).
 - [x] Descriptive analytics controller & routes (`/api/descriptive/summary`).
-- [x] Predictive regression service & routes (`/api/predictive/estimate`).
+- [x] Predictive regression service & routes (`/api/predictive/options`, `/metrics`, `/estimate`).
 - [x] Prescriptive transportation optimization service & routes (`/api/prescriptive/optimize`).
 - [x] Database CRUD controller & routes (`/api/db/*`).
 

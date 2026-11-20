@@ -352,17 +352,17 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
           <div class="bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 p-5 rounded-xl">
             <div class="text-xs font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wide">Historical Unoptimized Cost</div>
-            <div id="presc-baseline-cost" class="text-2xl font-black text-rose-900 dark:text-rose-200 mt-1.5">$84,520.00</div>
-            <div class="text-xs text-rose-600 dark:text-rose-400 mt-1">Ad-hoc dispatch decisions</div>
+            <div id="presc-baseline-cost" class="text-2xl font-black text-rose-900 dark:text-rose-200 mt-1.5">--</div>
+            <div class="text-xs text-rose-600 dark:text-rose-400 mt-1">Historical dispatch mix, same unit costs</div>
           </div>
           <div class="bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60 p-5 rounded-xl">
             <div class="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Optimal Prescribed Cost</div>
-            <div id="presc-optimal-cost" class="text-2xl font-black text-emerald-900 dark:text-emerald-200 mt-1.5">$70,840.00</div>
-            <div class="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Mathematical minimum solution</div>
+            <div id="presc-optimal-cost" class="text-2xl font-black text-emerald-900 dark:text-emerald-200 mt-1.5">--</div>
+            <div class="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Exact minimum (VAM + MODI)</div>
           </div>
           <div class="bg-sky-50/80 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-900/60 p-5 rounded-xl">
             <div class="text-xs font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wide">Total Net Savings</div>
-            <div id="presc-savings" class="text-2xl font-black text-sky-900 dark:text-sky-200 mt-1.5">$13,680.00 (16.2%)</div>
+            <div id="presc-savings" class="text-2xl font-black text-sky-900 dark:text-sky-200 mt-1.5">--</div>
             <div class="text-xs text-sky-600 dark:text-sky-400 mt-1">Direct bottom-line improvement</div>
           </div>
         </div>
@@ -380,12 +380,8 @@
             <thead id="matrix-thead">
               <tr class="bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700">
                 <th class="p-3 text-left">Origin Warehouse</th>
-                <th class="p-3">Atlanta Hub<br><span class="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Demand: 380</span></th>
-                <th class="p-3">Detroit Plant<br><span class="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Demand: 450</span></th>
-                <th class="p-3">Houston Facility<br><span class="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Demand: 420</span></th>
-                <th class="p-3">Denver Center<br><span class="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Demand: 350</span></th>
-                <th class="p-3">Phoenix Park<br><span class="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Demand: 400</span></th>
-                <th class="p-3 bg-slate-100 dark:bg-slate-750 text-slate-800 dark:text-slate-200">Available Inventory</th>
+                <th class="p-3 font-normal text-slate-500 dark:text-slate-400">Loading hubs and demand from the API...</th>
+                <th class="p-3 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">Available Inventory</th>
               </tr>
             </thead>
             <tbody id="matrix-tbody" class="divide-y divide-slate-200 dark:divide-slate-800"></tbody>

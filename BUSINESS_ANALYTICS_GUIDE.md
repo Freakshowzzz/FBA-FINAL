@@ -25,7 +25,7 @@ The architecture bridges a 5-entity relational SQLite database with mathematical
 │ 2. PREDICTIVE ANALYTICS   ("What Will Happen?")             │
 │    • Multiple Linear Regression (OLS Model)                 │
 │    • Interactive What-If Scenario Simulator                │
-│    • R² = 0.924 | MAE = ±$46.80 USD                         │
+│    • Held-out R² = 0.977 | MAE ≈ $119.59 USD (20% test set) │
 │    • Forecasts freight expense & transit lead time          │
 └───────────────────────────┬─────────────────────────────────┘
                             │ (Feeds cost coefficients & constraints)
@@ -33,9 +33,9 @@ The architecture bridges a 5-entity relational SQLite database with mathematical
 ┌─────────────────────────────────────────────────────────────┐
 │ 3. PRESCRIPTIVE ANALYTICS ("What Should We Do?")            │
 │    • Constrained Transportation Problem Linear Program      │
-│    • Vogel's Approximation / Least-Cost Cell Solver         │
+│    • Vogel's Approximation start + MODI optimality (exact)  │
 │    • Optimal Unit Allocation Matrix & Dispatch Schedule     │
-│    • Verifies $13,680+ (16.2%) Net Bottom-Line Savings      │
+│    • $66,366 (27.99%) saving vs. historical dispatch mix    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -44,7 +44,7 @@ The architecture bridges a 5-entity relational SQLite database with mathematical
 # 1. Descriptive Analytics ("What Happened?")
 
 ### 1.1 Business Objective
-The Descriptive Analytics module inspects the historical shipping log (**120 dispatches**) over a 6-month operational window. Its primary purpose is to aggregate raw logistics transactions into diagnostic KPIs and visual trends, answering:
+The Descriptive Analytics module inspects the historical shipping log (**120 dispatches**, 3 May to 27 October 2026) over a 6-month operational window. The data is seeded for this case study (TitanMotor is a hypothetical company), so the figures quoted in this guide describe the bundled database and will change if it is re-seeded. Its primary purpose is to aggregate raw logistics transactions into diagnostic KPIs and visual trends, answering:
 * *Where was capital spent?*
 * *Which carriers handled the most freight?*
 * *Where did transit bottlenecks and delivery delays occur?*
@@ -105,7 +105,7 @@ Every KPI on Tab 1 is calculated directly in SQLite via SQL aggregations in `con
          SUM(units_shipped) as total_units
   FROM shipment_transactions GROUP BY SUBSTR(shipment_date, 1, 7) ORDER BY month_label ASC;
   ```
-* **Analytical Meaning:** Plots expenditure trajectory across the 6-month window. Illustrates seasonal spikes and the uncoordinated dispatching that caused the 24.8% quarterly cost spike.
+* **Analytical Meaning:** Plots expenditure across the 6-month window. In the bundled data monthly spend is volatile and tracks dispatch volume rather than rising steadily: about \$30,700 (May), \$63,200 (June), \$61,200 (July), \$33,500 (August), \$65,700 (September) and \$60,100 (October), roughly \$52,400 per month on average. The swings illustrate how uneven, uncoordinated dispatching makes freight spend hard to budget.
 
 #### Chart 4: Carrier Delay Percentage vs. Average Transit Days (Dual Comparison)
 * **SQL Query:**
@@ -115,7 +115,7 @@ Every KPI on Tab 1 is calculated directly in SQLite via SQL aggregations in `con
          ROUND(AVG(transit_days), 1) as avg_days
   FROM shipment_transactions GROUP BY carrier_name;
   ```
-* **Analytical Meaning:** Compares carrier reliability versus speed. Highlights that while *ApexHaul* charges lower rates, it suffers a 22% delay rate, whereas *Titan Logistics Fleet* maintains a 5% delay rate with consistent 2-to-3 day transit times.
+* **Analytical Meaning:** Compares carrier reliability versus speed. In the bundled data *ApexHaul* has the highest delay rate (25.0%), *Titan Logistics Fleet* sits at 11.1% with a 3.2-day average transit, and *TransCoast* had no delayed shipments (0.0%, 2.8-day average). Average transit across all carriers is 3.3 days.
 
 ---
 
@@ -127,51 +127,58 @@ Before cargo leaves a warehouse, logistics managers need to know:
 * *How many transit days should the receiving client expect?*
 * *What is the delay bottleneck probability?*
 
-The Predictive Analytics module trains a **Multiple Linear Regression (OLS) Model** on the 120 historical transactions, allowing decision-makers to simulate scenarios interactively before dispatching motors.
+The Predictive Analytics module fits a **Multiple Linear Regression (OLS) Model** to the 120 historical transactions (validated on a hold-out set, see 2.3), allowing decision-makers to simulate scenarios interactively before dispatching motors.
 
 ### 2.2 Mathematical Model Formulation
 
-The freight shipping cost for heavy industrial motors is estimated using the multi-variable regression equation:
+The freight shipping cost for heavy industrial motors is estimated with a multiple linear regression fitted by Ordinary Least Squares (normal equations, solved in `services/regressionService.js`):
 
-$$\widehat{\text{Cost}} = \left( \beta_0 + \beta_{\text{weight}} \cdot X_{\text{weight}} + \beta_{\text{dist}} \cdot X_{\text{dist}} \right) \times \gamma_{\text{carrier}} + \text{HandlingFee}$$
+$$\widehat{\text{Cost}} = \beta_0 + \beta_{\text{weight}} \cdot X_{\text{weight}} + \beta_{\text{dist}} \cdot X_{\text{dist}} + \delta_{\text{carrier}} + \text{HandlingFee}$$
 
-Where:
-* **$\beta_0 = 185.40$ (Base Intercept):** Fixed setup, dispatch documentation, and minimum dock fee.
-* **$X_{\text{weight}}$ (Total Cargo Weight in kg):** Dynamically computed as:
+Where the coefficients are **estimated from the data, not typed in** (values below are for the bundled database; the dashboard shows the live ones):
+* **$\beta_0 \approx 158.54$ (Intercept):** Baseline cost not explained by weight, distance or carrier.
+* **$X_{\text{weight}}$ (Total Cargo Weight in kg):** Computed as:
   $$X_{\text{weight}} = \text{Units Shipped} \times \text{Product Weight (kg from } \texttt{motor\_products}\text{)}$$
-* **$\beta_{\text{weight}} = 0.078$ USD/kg:** Marginal freight rate per kilogram of industrial motor cargo.
-* **$X_{\text{dist}}$ (Route Distance in km):** Highway/rail distance fetched from `carriers_routes` between the origin warehouse city and destination hub city.
-* **$\beta_{\text{dist}} = 1.12$ USD/km:** Marginal cost per kilometer of freight haul.
-* **$\gamma_{\text{carrier}}$ (Carrier Factor Multiplier):**
-  * `NationalRail Cargo`: $0.85\times$ *(Lowest rate for heavy bulk rail)*
-  * `Titan Logistics Fleet`: $0.90\times$ *(Internal fleet discount)*
-  * `ApexHaul Trucking`: $1.00\times$ *(Standard baseline trucking)*
-  * `TransCoast Freight`: $1.05\times$ *(Interstate express)*
-  * `SwiftFreight Express`: $1.18\times$ *(Guaranteed expedited delivery)*
-* **$\text{HandlingFee}$:** Facility staging fee charged by origin warehouse:
+* **$\beta_{\text{weight}} \approx 0.0761$ USD/kg:** Marginal cost per kilogram of cargo.
+* **$X_{\text{dist}}$ (Route Distance in km):** Taken from `carriers_routes` for the origin and destination cities. If that city pair has no route, `services/laneService.js` falls back to shipment history, then to a labelled network-average estimate.
+* **$\beta_{\text{dist}} \approx 1.1298$ USD/km:** Marginal cost per kilometer of haul.
+* **$\delta_{\text{carrier}}$ (Carrier effect, dummy variables):** a dollar offset per shipment relative to the reference carrier (`ApexHaul Trucking`, the alphabetically first, effect 0):
+  * `NationalRail Cargo`: +\$6.46
+  * `SwiftFreight Express`: +\$404.00 *(expedited delivery)*
+  * `Titan Logistics Fleet`: -\$281.21 *(internal fleet)*
+  * `TransCoast Freight`: -\$10.08
+* **$\text{HandlingFee}$:** Facility staging fee charged by the origin warehouse, added on top of the regression output:
   $$\text{HandlingFee} = \text{Units Shipped} \times \texttt{handling\_fee\_per\_unit (from } \texttt{warehouses}\text{)}$$
 
 ### 2.3 Goodness of Fit & Diagnostic Metrics
 
-The regression parameters are validated using classical statistical diagnostics:
+To avoid judging the model on data it was fitted to, the 120 shipments are split 80/20 with a fixed random seed. The model is fitted on the 96 training rows and scored on the 24 held-out rows; the production model is then refitted on all 120.
 
-$$R^2 = 1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2} = 0.924$$
+$$R^2 = 1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2}$$
 
-$$\text{MAE} = \frac{1}{N} \sum_{i=1}^N |y_i - \hat{y}_i| = \pm \$46.80\text{ USD}$$
+$$\text{MAE} = \frac{1}{N} \sum_{i=1}^N |y_i - \hat{y}_i|$$
 
-* **$R^2 = 0.924$ (Coefficient of Determination):** **92.4%** of total freight cost variation is explained by cargo weight, distance, carrier selection, and warehouse handling fees.
-* **$\text{MAE} = \pm \$46.80$ (Mean Absolute Error):** On average, model cost forecasts deviate by less than \$47 from actual billed carrier invoices.
-* **Sample Size ($N$):** 120 audited shipment dispatches.
+| Metric | Training (96 rows) | Held-out test (24 rows) | Full-data fit (120 rows) |
+|---|---|---|---|
+| $R^2$ | 0.985 | **0.977** | 0.984 |
+| Adjusted $R^2$ | 0.984 | 0.969 | 0.984 |
+| MAE (USD) | 102.76 | **119.59** | 106.74 |
+| RMSE (USD) | 163.14 | 157.50 | 161.00 |
+
+* **Headline $R^2 = 0.977$:** about **97.7%** of freight cost variation on unseen shipments is explained by cargo weight, distance and carrier.
+* **Headline $\text{MAE} \approx \$119.59$:** on held-out shipments the forecast is off by about \$120 on average. Average shipment cost is about \$2,619, so this is roughly 4.6%.
+* **Sample size:** 120 shipments in total. The test set is only 24 rows, so these held-out figures are indicative rather than precise.
+* **Transit days** come from a second small OLS on distance and carrier (in-sample $R^2 \approx 0.51$, MAE about 0.8 days). **Delay risk** is the carrier's historical late-shipment rate: ApexHaul 25.0%, SwiftFreight 10.5%, Titan Logistics Fleet 11.1%, NationalRail 8.7%, TransCoast 0.0%.
 
 ### 2.4 Interactive What-If Scenario Simulator
 
-The frontend simulator connects to `POST /api/predictive/estimate` and dynamically computes:
+The frontend simulator connects to `POST /api/predictive/estimate` and dynamically computes the figures below. The dashboard's $R^2$, MAE, sample size and formula are loaded from `GET /api/predictive/metrics`.
 1. **Total Cargo Weight (kg):** `units * motor_weight`
 2. **Total Predicted Freight Cost ($):** Computed via the regression formula.
 3. **Cost per Motor Unit ($):** `Predicted Cost / Units`
 4. **Cost per Kilogram ($):** `Predicted Cost / Total Weight`
-5. **Estimated Transit Lead Time (Days):** Calculated based on route distance and carrier mode.
-6. **Lane Delay Risk (%):** Historical probability of dispatch delays on that lane.
+5. **Estimated Transit Lead Time (Days):** From the transit-time regression on route distance and carrier.
+6. **Delay Risk (%):** The selected carrier's historical share of delayed shipments.
 
 ---
 
@@ -188,51 +195,54 @@ The logistics network is formulated as a classical **Constrained Transportation 
 $$\min Z = \sum_{i=1}^{m} \sum_{j=1}^{n} c_{ij} x_{ij}$$
 
 Where:
-* $m = 3$ Origin Warehouses:
-  * Warehouse 1: **Chicago Facility**
-  * Warehouse 2: **Dallas Facility**
-  * Warehouse 3: **Philadelphia Facility**
+* $m = 3$ Origin Warehouses (supply $S_i$ = each warehouse's `current_inventory`):
+  * Warehouse 1: **Chicago Facility 1**, 4,482 units
+  * Warehouse 2: **Dallas Facility 1**, 1,807 units
+  * Warehouse 3: **Philadelphia Facility 1**, 3,249 units
 * $n = 5$ Customer Destination Hubs:
-  * Hub 1: **Atlanta Assembly Hub**
-  * Hub 2: **Denver Hub**
-  * Hub 3: **Cleveland Hub**
-  * Hub 4: **Charlotte Hub**
-  * Hub 5: **Milwaukee Hub**
-* $c_{ij}$: Unit shipping cost to transport one motor from warehouse $i$ to hub $j$, calculated from route distances in `carriers_routes` and handling fees in `warehouses`.
+  * Hub 1: **General Industrial Motors (Atlanta Hub)**, demand 605 units
+  * Hub 2: **Vanguard EV Assembly (Denver Hub)**, demand 469 units
+  * Hub 3: **Apex Heavy Machinery (Cleveland Hub)**, demand 1,192 units
+  * Hub 4: **Titan Manufacturing Ltd (Charlotte Hub)**, demand 440 units
+  * Hub 5: **Pinnacle Aerospace Systems (Milwaukee Hub)**, demand 405 units
+* $c_{ij}$: Unit shipping cost to transport one motor from warehouse $i$ to hub $j$, calculated from lane distance and base rate per km (via `services/laneService.js`) and handling fees in `warehouses`. Of the 15 lanes, 3 have an exact route in `carriers_routes`, 3 come from shipment history and 9 are network-average estimates (marked `*` / `†` on the dashboard).
 * $x_{ij}$: Decision variable representing the number of motor units shipped along lane $(i, j)$.
 
 #### Mathematical Constraints:
 1. **Warehouse Supply Constraints:**
    $$\sum_{j=1}^{n} x_{ij} \le S_i \quad \forall i \in \{1, 2, 3\}$$
-   *(Shipments leaving each warehouse cannot exceed its available inventory)*.
+   *(Shipments leaving each warehouse cannot exceed its `current_inventory`; total inventory is 9,538 units)*.
 
 2. **Customer Hub Demand Constraints:**
    $$\sum_{i=1}^{m} x_{ij} \ge D_j \quad \forall j \in \{1, 2, 3, 4, 5\}$$
-   *(Every regional assembly hub must receive its full monthly demand quota)*.
+   *(Every regional assembly hub must receive its full `monthly_demand_units`; total demand is 3,111 units. If inventory were short, the shortfall is reported as unmet demand.)*
 
 3. **Non-negativity Constraints:**
    $$x_{ij} \ge 0 \quad \forall i, j$$
    *(Physical motor shipments cannot be negative)*.
 
-### 3.3 Algorithmic Solution Method (Vogel's Approximation / Least-Cost Cell)
+### 3.3 Algorithmic Solution Method (Vogel's Approximation + MODI)
 
-The optimization engine in `services/optimizationService.js` executes the **Greedy Least-Cost Cell Optimization Algorithm**:
-1. It computes all warehouse-to-hub lane unit costs $c_{ij}$.
-2. It sorts all candidate supply lanes in ascending order of unit cost.
-3. It iteratively allocates the maximum feasible shipment quantity $\min(S_i, D_j)$ to the lowest-cost available lane.
-4. It updates remaining warehouse inventories and hub demand quotas until all client demands are satisfied at zero slack.
+The solver in `services/transportSolver.js` (called from `services/optimizationService.js`) is an exact method:
+1. **Balance the problem.** If supply and demand differ, a zero-cost dummy row or column is added (a dummy destination absorbs unused inventory; a dummy origin represents any unmet demand).
+2. **Starting solution, Vogel's Approximation Method (VAM).** For every open row and column it computes a penalty (the gap between its two cheapest open cells), picks the line with the largest penalty and fills its cheapest cell. This usually gives a near-optimal start.
+3. **Optimality test, MODI (u-v) method.** It computes dual values $u_i, v_j$ for the basic cells and the reduced cost $c_{ij} - u_i - v_j$ for every unused cell. If any is negative, it pivots along the improving loop and repeats.
+4. **Stop** when all reduced costs are $\ge 0$. That proves the allocation is a global cost minimum for this model. On the bundled data the VAM start costs \$195,222 and MODI improves it to \$170,766 in 2 pivots.
 
 ### 3.4 Verification of Bottom-Line Cost Savings
 
-The system compares the unoptimized ad-hoc dispatching against the LP optimal solution:
+The system compares the historical dispatch pattern with the optimal solution, both costed with the **same unit-cost matrix**:
 
-$$\text{Dollar Savings} = \text{Baseline Unoptimized Cost} - \text{Optimal Prescribed Cost}$$
+$$\text{Dollar Savings} = \text{Baseline Cost} - \text{Optimal Prescribed Cost}$$
 
 $$\text{Percentage Savings} = \left( \frac{\text{Dollar Savings}}{\text{Baseline Cost}} \right) \times 100\%$$
 
-* **Historical Unoptimized Baseline Cost:** $\$84,520.00$ *(Arbitrary carrier routing)*
-* **Optimal Prescribed Solution:** $\$70,840.00$ *(Mathematical global minimum)*
-* **Total Net Savings:** **$\$13,680.00$ (16.2% verified cost reduction)**
+* **Baseline (historical dispatch mix):** built from `shipment_transactions`. Each warehouse's historical share of units shipped is applied to the current hub demand, capped at current inventory. No hub has shipment history on a specific warehouse pair in the data, so the overall warehouse share is used for all five hubs.
+* **Baseline cost:** **\$237,132**
+* **Optimal prescribed cost:** **\$170,766** *(global minimum for the model)*
+* **Total net savings:** **\$66,366 (27.99%)**
+
+These values are computed live by `GET /api/prescriptive/optimize` for the bundled database and will change if the data changes. Because 9 of the 15 lane costs are estimates, read the savings as indicative of the size of the opportunity rather than an audited figure.
 
 ### 3.5 Actionable Implementation Directives
 
@@ -295,5 +305,5 @@ All 3 analytics tiers are continuously synchronized with the 5 relational tables
 | Stage | Question Answered | Statistical / Mathematical Tool | Primary Output |
 |---|---|---|---|
 | **Tier 1: Descriptive** | *What happened historically?* | SQL Groupings, SUM, AVG, Count, Canvas Charts | Historical spend benchmarks, delay bottlenecks, carrier market share |
-| **Tier 2: Predictive** | *What will a new shipment cost?* | Multiple Linear Regression (OLS), $R^2 = 0.924$ | Real-time freight cost estimates, transit days, delay risk % |
-| **Tier 3: Prescriptive** | *What is the best shipping plan?* | Linear Programming Transportation Problem (OR) | Optimal warehouse-to-hub matrix, \$13,680 (16.2%) verified net savings |
+| **Tier 2: Predictive** | *What will a new shipment cost?* | Multiple Linear Regression (OLS), held-out $R^2 = 0.977$ | Real-time freight cost estimates, transit days, delay risk % |
+| **Tier 3: Prescriptive** | *What is the best shipping plan?* | Transportation Problem (Vogel's Approximation + MODI) | Optimal warehouse-to-hub matrix, \$66,366 (27.99%) saving vs. historical dispatch mix |
